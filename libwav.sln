@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwav", "libwav\libwav.vcxproj", "{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libwav_test", "libwav_test\libwav_test.vcxproj", "{3C1A720A-F060-47F3-8FF5-037FA95FB502}"
+	ProjectSection(ProjectDependencies) = postProject
+		{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06} = {DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}.Debug|Win32.ActiveCfg = Debug|Win32
+		{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}.Debug|Win32.Build.0 = Debug|Win32
+		{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}.Release|Win32.ActiveCfg = Release|Win32
+		{DA89BCC4-898E-4DD9-8FD4-546BC3CEAD06}.Release|Win32.Build.0 = Release|Win32
+		{3C1A720A-F060-47F3-8FF5-037FA95FB502}.Debug|Win32.ActiveCfg = Debug|Win32
+		{3C1A720A-F060-47F3-8FF5-037FA95FB502}.Debug|Win32.Build.0 = Debug|Win32
+		{3C1A720A-F060-47F3-8FF5-037FA95FB502}.Release|Win32.ActiveCfg = Release|Win32
+		{3C1A720A-F060-47F3-8FF5-037FA95FB502}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
