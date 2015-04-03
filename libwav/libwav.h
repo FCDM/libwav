@@ -8,10 +8,14 @@
 #define LIBWAV_API __declspec(dllexport)
 #else
 #define LIBWAV_API __declspec(dllimport)
+#ifdef _DEBUG	//vs
 #pragma comment(lib, "../Debug/libwav.lib")
+#else
+#pragma comment(lib, "../Release/libwav.lib")
 #endif
-
+#endif
 #pragma warning(disable: 4996)
+
 #include	<iostream>
 #include	<fstream>
 #include	<cstdio>
@@ -20,7 +24,7 @@
 #include	<typeinfo>
 
 #ifndef byte
-#define byte char
+#define byte BYTE
 #endif
 
 static const uint16_t WAVE_FORMAT_PCM = 1;	//ACCEPT
@@ -29,11 +33,12 @@ static const uint16_t WAVE_FORMAT_ALAW = 6;	//DIE
 static const uint16_t WAVE_FORMAT_MULAW = 7;	//DIE
 static const uint16_t WAVE_FORMAT_EXTENSIBLE = 0xFFFE;	//ACCEPT
 
+
+
 struct WAVE_CHUNK
 {
 	char ckID[4];
 	uint32_t ckSize;
-	//data
 };
 
 struct WAVE_H
@@ -60,7 +65,23 @@ struct WAVE_H
 struct WAVE_H_PCM
 {
 	WAVE_H header;
-	WAVE_CHUNK data;	//bps*fps*nBlocks [+padding to become even]
+	//figure out the data chunk first
+	WAVE_CHUNK* chunks;
+};
+
+static const char WAVE_MEDIASUBTYPE_PCM[16]
+{
+	0x00, 0x00, 0x00, 0x01,
+		0x00, 0x00,
+		0x00, 0x10,
+		0x80,
+		0x00,
+		0x00,
+		0xAA,
+		0x00,
+		0x38,
+		0x9B,
+		0x71
 };
 
 struct WAVE_H_EXTENDED
@@ -69,10 +90,12 @@ struct WAVE_H_EXTENDED
 	uint16_t cbSizeExtension;	//22
 	uint16_t wValidBitsPerSample;	//at most = 8*bps
 	uint32_t dwChannelMask;	//speaker mask
-	char SubFormat[16];	//GUID	//furthur parsing required
+
+	// 00000001-0000-0010-8000-00AA00389B71            MEDIASUBTYPE_PCM 0x00000001, 0x0000, 0x0010, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71)
+	char SubFormat[16];
+
 	
-	WAVE_CHUNK fact;	//nCH*nBlocks
-	WAVE_CHUNK data;	//bps*fps*nBlocks [+padding to become even]
+	WAVE_CHUNK* chunks;
 };
 
 class LIBWAV_API Wave 
@@ -82,15 +105,30 @@ public:
 
 	Wave(byte raw[], int length);
 
+	WAVE_H* getH(){ return h; }
 	
+	byte* get_data_p()
+	{
+		return ((byte*)data) + sizeof(WAVE_CHUNK);
+	}
 
-	WAVE_H* h;
+	struct memblock
+	{
+		uintptr_t p;
+		int nBytes;
+	};
+
+	memblock* next();
+	memblock* next(int nBlocks);
+
 private:
 	void Wave_base_constructor(byte raw[]);	//unsafe
-	
+	WAVE_H* h;
+	memblock mem;
 
 protected:
 	byte* raw;
 	WAVE_CHUNK* data;
-
+	byte* p_data = nullptr;
 };
+
