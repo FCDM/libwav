@@ -5,8 +5,8 @@
 #include "libwav_test.h"
 #include <cmath>
 
-//Wave w("sound.wav");
-Wave w("16bit_signed_pcm.wav");
+Wave w("sound.wav");
+//Wave w("16bit_signed_pcm.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
 HWND g_hWnd;

@@ -73,16 +73,16 @@ Wave::memblock* Wave::next(int nBlocks)
 	if (p_data == nullptr) p_data = get_data_p();
 
 	mem.p = (uintptr_t)p_data;
-	p_data += nBytes;
 
-	if (p_data > get_data_p() + data->ckSize)
+	if (p_data + nBytes > get_data_p() + data->ckSize)
 	{
-		mem.nBytes = get_data_p() + data->ckSize - (p_data - nBytes);
+		mem.nBytes = get_data_p() + data->ckSize - (p_data);
 	}
 	else
 	{
 		mem.nBytes = nBytes;
 	}
+	p_data += mem.nBytes;
 
 	return &mem;
 }
