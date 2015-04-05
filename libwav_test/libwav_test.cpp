@@ -13,27 +13,27 @@ HWND g_hWnd;
 int scrW=800;
 int scrH=600;
 
-struct int24
-{
-	signed int data : 24;
-};
+
 
 double scaleRange(double in, double oldMin, double oldMax, double newMin, double newMax)
 {
 	return (in / ((oldMax - oldMin) / (newMax - newMin))) + newMin;
 }
-
+int freqdiff = 0;
 VOID OnPaint(HDC hdc)
 {
 	Graphics graphics(hdc);
 	Pen      pen(Color::Red);
 	Pen axis(Color::Black);
-	graphics.Clear(Color::White);
-	graphics.DrawLine(&axis, 0, scrH / 2, scrW, scrH / 2);
-
-	Wave::memblock* mem = w.next(scrW);
+	Pen power(Color::Blue);
+	Pen green(Color::Green);
+	
+	memblock* mem = w.next(scrW);
 	if (mem->nBytes == 0) return;
 
+	graphics.Clear(Color::White);
+	graphics.DrawLine(&axis, 0, scrH / 2, scrW, scrH / 2);
+	graphics.DrawLine(&axis, scrW / 2, 0, scrW / 2, scrH);
 	int bps = (w.getH()->wBitsPerSample / 8);
 	
 	byte* u = (byte*)mem->p;
@@ -64,6 +64,32 @@ VOID OnPaint(HDC hdc)
 		graphics.DrawLine(&pen, px, (int)py, px + 1, newy);
 		py = newy;
 		px++;
+	}
+	
+	DFTransform* dft = w.DFT(*mem);
+	DFTransform::DFTResult* dftr;
+	
+	
+	int prev = 0;
+	for (int i = 0; i < scrW; i++)
+	{
+		dftr = dft->next();
+		if (dftr == nullptr) return;
+		if (i == 1)
+		{
+			freqdiff = dftr->freq;
+			
+		}
+
+
+		//Spectral magnitude in dB
+		//if (i != 0)graphics.DrawLine(&power, i - 1, prev, i, scrH - dftr->dbmag);
+		//else graphics.DrawLine(&power, i - 1, scrH - dftr->dbmag, i, scrH - dftr->dbmag);
+		//prev = scrH - dftr->dbmag;
+
+
+		//graphics.DrawLine(&power, i, scrH, i, scrH - dftr->real);
+		//graphics.DrawLine(&green, i, scrH, i, scrH - dftr->imag);
 	}
 }
 
@@ -200,12 +226,36 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	PAINTSTRUCT ps;
 	HDC hdc;
 
-	long* _rect = new long[4];
+	long _rect[4];
+	GetClientRect(hWnd, (LPRECT)_rect);
+
+	Graphics* g_p;
+	POINT p;
+	GetCursorPos(&p);
+	Font font(&FontFamily(L"Arial"), 12);
+	SolidBrush brush(Color::Black);
+	Gdiplus::Rect* rect_p;
+
+	if (message != WM_PAINT && message != WM_KEYUP)
+	{
+		hdc = BeginPaint(hWnd, &ps);
+		g_p = new Graphics(hdc);
+		rect_p = new Rect(0, 0, 10 * 10, 24);
+		g_p->FillRectangle(new SolidBrush(Color::White), *rect_p);
+
+		POINT scr;
+		scr.x = 0;
+		scr.y = 0;
+		ClientToScreen(hWnd, &scr);
+		
+		g_p->DrawString((std::wstring(L"Freq: ")+std::to_wstring(freqdiff*(p.x-scr.x))).c_str(), -1, &font, PointF(0, 0), &brush);
+		EndPaint(hWnd, &ps);
+		InvalidateRect(hWnd, NULL, FALSE);
+	}
 
 	switch (message)
 	{
 	case WM_SIZE:
-		GetClientRect(hWnd, (LPRECT)_rect);
 		scrW = _rect[2] - _rect[0];
 		scrH = _rect[3] - _rect[1];
 		break;

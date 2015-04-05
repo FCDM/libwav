@@ -21,7 +21,11 @@
 #include	<cstdio>
 #include	<cstdint>
 #include	<string>
-#include	<typeinfo>
+#include	<cmath>
+
+#ifndef M_PI
+#define M_PI           3.14159265358979323846  /* pi */
+#endif
 
 #ifndef byte
 #define byte BYTE
@@ -33,6 +37,10 @@ static const uint16_t WAVE_FORMAT_ALAW = 6;	//DIE
 static const uint16_t WAVE_FORMAT_MULAW = 7;	//DIE
 static const uint16_t WAVE_FORMAT_EXTENSIBLE = 0xFFFE;	//ACCEPT
 
+struct int24
+{
+	signed int data : 24;
+};
 
 
 struct WAVE_CHUNK
@@ -98,12 +106,80 @@ struct WAVE_H_EXTENDED
 	WAVE_CHUNK* chunks;
 };
 
+struct memblock
+{
+	uintptr_t p;
+	int nBytes;
+};
+
+
+/*
+DFT
+
+X(k) = foreach(n:0->N-1)x(n)cos(2pi*k*n/N) - foreach(n:0->N-1)x(n)sin(2pi*k*n/N) * i
+
+//in
+k: index of sample
+x(n): amplitude
+N: nSamples
+
+//out
+X(k): coefficient
+P(k): power
+F(k): frequency
+
+
+Result:
+F(k) = k * nSamplesPerSecond(fs) / nSamples(N)
+P(k) = Real(X(k))**2 + Imag(X(k))**2
+
+*/
+class LIBWAV_API DFTransform
+{
+public:
+	struct DFTResult
+	{
+		//index
+		int k;
+
+		//DFT: X(k)
+		double real;
+		double imag;	//negative already	DFTResult->imag * (i)
+
+		//Analysis
+		double freq;	//x-axis
+		double mag;		//y-axis
+		double dbmag;	//spec mag in db
+	};
+
+	DFTransform(memblock* memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond);
+
+	~DFTransform(){};
+
+	bool hasNext();
+	DFTResult* next();
+
+private:
+	memblock* memory;
+	int k;
+	int nSamples;
+	int nChannels;
+	int nSamplesPerSecond;
+	int bytesPerSecond;
+
+	DFTResult result;
+
+};
+
+
+//raw PCM data is a continuous sampling of sound amplitudes
 class LIBWAV_API Wave 
 {
 public:
 	Wave(std::string filename);
 
 	Wave(byte raw[], int length);
+	~Wave();
 
 	WAVE_H* getH(){ return h; }
 	
@@ -112,14 +188,36 @@ public:
 		return ((byte*)data) + sizeof(WAVE_CHUNK);
 	}
 
-	struct memblock
+
+	struct DFTResult
 	{
-		uintptr_t p;
-		int nBytes;
+		int cur;
+		int real;
+		int imag;
 	};
 
 	memblock* next();
 	memblock* next(int nBlocks);
+	memblock* next(int nBlocks, DFTransform* dft)
+	{
+		memblock& m = *next(nBlocks);
+		dft = DFT(m);
+		return &m;
+	}
+
+	DFTransform* DFT()
+	{
+		memblock m;
+		memset(&m, 0, sizeof(memblock));
+		m.p = (uintptr_t)get_data_p();
+		m.nBytes = data->ckSize;
+		return DFT(m);
+	}
+
+	DFTransform* DFT(memblock& m)
+	{
+		return new DFTransform(&m, m.nBytes / (h->wBitsPerSample / 8 * h->nChannels), h->nChannels, h->nSamplesPerSec, h->wBitsPerSample / 8);
+	}
 
 private:
 	void Wave_base_constructor(byte raw[]);	//unsafe
@@ -127,8 +225,7 @@ private:
 	memblock mem;
 
 protected:
-	byte* raw;
+	byte* raw = nullptr;
 	WAVE_CHUNK* data;
 	byte* p_data = nullptr;
 };
-

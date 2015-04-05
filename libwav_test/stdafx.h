@@ -25,3 +25,5 @@
 using namespace Gdiplus;
 #pragma comment (lib,"Gdiplus.lib")
 
+#include <sstream>
+#include <string>

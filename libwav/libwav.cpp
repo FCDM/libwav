@@ -12,12 +12,21 @@ Wave::Wave(string filename)
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
 	fseek(f, 0, SEEK_SET);
-	raw = (BYTE*)malloc(fsize);
+	raw = new BYTE[fsize];
 	fread(raw, 1, fsize, f);
 	fclose(f);
 
 	if (fsize > sizeof(WAVE_H)) Wave_base_constructor(raw);
 	else throw new exception("length invalid");
+}
+
+Wave::~Wave()
+{
+	if (raw)
+	{
+		delete raw;
+		raw = nullptr;
+	}
 }
 
 Wave::Wave(byte raw[], int length)
@@ -61,12 +70,12 @@ void Wave::Wave_base_constructor(byte raw[])
 	}
 }
 
-Wave::memblock* Wave::next()
+memblock* Wave::next()
 {
 	return next(1);
 }
 
-Wave::memblock* Wave::next(int nBlocks)
+memblock* Wave::next(int nBlocks)
 {
 	int nBytes = nBlocks * h->nBlockAlign;
 
@@ -86,3 +95,57 @@ Wave::memblock* Wave::next(int nBlocks)
 
 	return &mem;
 }
+
+DFTransform::DFTransform(memblock* memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond)
+{
+	this->memory = memory;
+	this->k = 0;
+	this->nSamples = nSamples;
+	this->nChannels = nChannels;
+	this->nSamplesPerSecond = nSamplesPerSecond;
+	this->bytesPerSecond = bytesPerSecond;
+}
+
+DFTransform::DFTResult* DFTransform::next()
+{
+	if (!hasNext()) return nullptr;
+	memset(&result, 0, sizeof(DFTResult));
+	result.k = k;
+	double xn, theta;
+	for (int n = 0; n < nSamples; n++)
+	{
+		switch (bytesPerSecond)
+		{
+		case 1:
+			xn = *(int8_t*)(memory->p + n*nChannels*bytesPerSecond);
+			break;
+		case 2:
+			xn = *(int16_t*)(memory->p + n*nChannels*bytesPerSecond);
+			break;
+		case 3:
+			xn = ((int24*)(memory->p + n*nChannels*bytesPerSecond))->data;
+			break;
+		case 4:
+			xn = *(int32_t*)(memory->p + n*nChannels*bytesPerSecond);
+			break;
+		default:
+			throw new std::exception("unsupported");
+		}
+		
+		theta = 2 * M_PI * k * n / nSamples;
+		result.real += (xn * std::cos(theta));
+		result.imag -= (xn * std::sin(theta));
+	}
+	result.freq = k * nSamplesPerSecond / nSamples;
+	result.mag = pow(result.real * result.real + result.imag * result.imag, 0.5);	//this is sub. because the square of an imag is negative;
+	result.dbmag = log10(result.mag) * 20;
+	k++;
+
+	return &result;
+}
+
+bool DFTransform::hasNext()
+{
+	return memory->p + nSamples*nChannels*bytesPerSecond >= memory->nBytes && k < nSamples;
+}
+
