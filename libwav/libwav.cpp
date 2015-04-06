@@ -96,7 +96,7 @@ memblock* Wave::next(int nBlocks)
 	return &mem;
 }
 
-DFTransform::DFTransform(memblock* memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond)
+DFTransform::DFTransform(memblock memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond)
 {
 	this->memory = memory;
 	this->k = 0;
@@ -117,27 +117,27 @@ DFTransform::DFTResult* DFTransform::next()
 		switch (bytesPerSecond)
 		{
 		case 1:
-			xn = *(int8_t*)(memory->p + n*nChannels*bytesPerSecond);
+			xn = *(int8_t*)(memory.p + n*nChannels*bytesPerSecond);
 			break;
 		case 2:
-			xn = *(int16_t*)(memory->p + n*nChannels*bytesPerSecond);
+			xn = *(int16_t*)(memory.p + n*nChannels*bytesPerSecond);
 			break;
 		case 3:
-			xn = ((int24*)(memory->p + n*nChannels*bytesPerSecond))->data;
+			xn = ((int24*)(memory.p + n*nChannels*bytesPerSecond))->data;
 			break;
 		case 4:
-			xn = *(int32_t*)(memory->p + n*nChannels*bytesPerSecond);
+			xn = *(int32_t*)(memory.p + n*nChannels*bytesPerSecond);
 			break;
 		default:
 			throw new std::exception("unsupported");
 		}
-		
-		theta = 2 * M_PI * k * n / nSamples;
+		theta = (2 * M_PI * k * n / nSamples);
 		result.real += (xn * std::cos(theta));
 		result.imag -= (xn * std::sin(theta));
 	}
 	result.freq = k * nSamplesPerSecond / nSamples;
-	result.mag = pow(result.real * result.real + result.imag * result.imag, 0.5);	//this is sub. because the square of an imag is negative;
+	result.mag = pow(result.real * result.real + result.imag * result.imag, 0.5);
+	result.angle = std::atan2(result.imag, result.real);
 	result.dbmag = log10(result.mag) * 20;
 	k++;
 
@@ -146,6 +146,6 @@ DFTransform::DFTResult* DFTransform::next()
 
 bool DFTransform::hasNext()
 {
-	return memory->p + nSamples*nChannels*bytesPerSecond >= memory->nBytes && k < nSamples;
+	return memory.p + nSamples*nChannels*bytesPerSecond >= memory.nBytes && k < nSamples;
 }
 

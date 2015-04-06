@@ -149,20 +149,22 @@ public:
 		//Analysis
 		double freq;	//x-axis
 		double mag;		//y-axis
+		double angle;	//phase in rad
+
 		double dbmag;	//spec mag in db
 	};
 
-	DFTransform(memblock* memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond);
+	DFTransform(memblock memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond);
 
 	~DFTransform(){};
 
 	bool hasNext();
 	DFTResult* next();
-
-private:
-	memblock* memory;
-	int k;
 	int nSamples;
+private:
+	memblock memory;
+	int k;
+	
 	int nChannels;
 	int nSamplesPerSecond;
 	int bytesPerSecond;
@@ -188,20 +190,12 @@ public:
 		return ((byte*)data) + sizeof(WAVE_CHUNK);
 	}
 
-
-	struct DFTResult
-	{
-		int cur;
-		int real;
-		int imag;
-	};
-
 	memblock* next();
 	memblock* next(int nBlocks);
 	memblock* next(int nBlocks, DFTransform* dft)
 	{
 		memblock& m = *next(nBlocks);
-		dft = DFT(m);
+		dft = DFT(m, 0);
 		return &m;
 	}
 
@@ -211,12 +205,21 @@ public:
 		memset(&m, 0, sizeof(memblock));
 		m.p = (uintptr_t)get_data_p();
 		m.nBytes = data->ckSize;
-		return DFT(m);
+		return DFT(m, 0);
 	}
 
-	DFTransform* DFT(memblock& m)
+	DFTransform* DFT(int k)
 	{
-		return new DFTransform(&m, m.nBytes / (h->wBitsPerSample / 8 * h->nChannels), h->nChannels, h->nSamplesPerSec, h->wBitsPerSample / 8);
+		memblock m;
+		memset(&m, 0, sizeof(memblock));
+		m.p = (uintptr_t)get_data_p();
+		m.nBytes = data->ckSize;
+		return DFT(m, k);
+	}
+
+	DFTransform* DFT(memblock& m, int k)
+	{
+		return new DFTransform(m, m.nBytes / (h->wBitsPerSample / 8 * h->nChannels), h->nChannels, h->nSamplesPerSec, h->wBitsPerSample / 8);
 	}
 
 private:
@@ -229,3 +232,9 @@ protected:
 	WAVE_CHUNK* data;
 	byte* p_data = nullptr;
 };
+
+/** Degrees to Radian **/
+#define degreesToRadians( degrees ) ( ( degrees ) / 180.0 * M_PI )
+
+/** Radians to Degrees **/
+#define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )

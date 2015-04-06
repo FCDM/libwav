@@ -13,13 +13,13 @@ HWND g_hWnd;
 int scrW=800;
 int scrH=600;
 
-
-
 double scaleRange(double in, double oldMin, double oldMax, double newMin, double newMax)
 {
 	return (in / ((oldMax - oldMin) / (newMax - newMin))) + newMin;
 }
+
 int freqdiff = 0;
+
 VOID OnPaint(HDC hdc)
 {
 	Graphics graphics(hdc);
@@ -34,6 +34,7 @@ VOID OnPaint(HDC hdc)
 	graphics.Clear(Color::White);
 	graphics.DrawLine(&axis, 0, scrH / 2, scrW, scrH / 2);
 	graphics.DrawLine(&axis, scrW / 2, 0, scrW / 2, scrH);
+
 	int bps = (w.getH()->wBitsPerSample / 8);
 	
 	byte* u = (byte*)mem->p;
@@ -66,11 +67,12 @@ VOID OnPaint(HDC hdc)
 		px++;
 	}
 	
-	DFTransform* dft = w.DFT(*mem);
+	DFTransform* dft = w.DFT(*mem, 0);
 	DFTransform::DFTResult* dftr;
-	
-	
+
 	int prev = 0;
+	int previ = 0;
+
 	for (int i = 0; i < scrW; i++)
 	{
 		dftr = dft->next();
@@ -83,13 +85,21 @@ VOID OnPaint(HDC hdc)
 
 
 		//Spectral magnitude in dB
-		//if (i != 0)graphics.DrawLine(&power, i - 1, prev, i, scrH - dftr->dbmag);
-		//else graphics.DrawLine(&power, i - 1, scrH - dftr->dbmag, i, scrH - dftr->dbmag);
-		//prev = scrH - dftr->dbmag;
+		//even function
+		int val = 1 * (dftr->dbmag);
+		if (i != 0)graphics.DrawLine(&power, i - 1, prev, i, scrH/2 - val);
+		else graphics.DrawLine(&power, i - 1, scrH/2 - val, i, scrH/2 - val);
+		prev = scrH/2 - val;
 
+		//odd function
+		int vali = radiansToDegrees(dftr->angle);
+		if (i != 0)graphics.DrawLine(&green, i - 1, previ, i, scrH / 2 - vali);
+		else graphics.DrawLine(&green, i - 1, scrH / 2 - previ, i, scrH / 2 - vali);
+		previ = scrH / 2 - vali;
 
-		//graphics.DrawLine(&power, i, scrH, i, scrH - dftr->real);
-		//graphics.DrawLine(&green, i, scrH, i, scrH - dftr->imag);
+/*
+		graphics.DrawLine(&power, i, scrH, i, scrH - 100*dftr->real);
+		graphics.DrawLine(&green, i, scrH, i, scrH - 100*dftr->imag);*/
 	}
 }
 
