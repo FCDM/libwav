@@ -14,7 +14,8 @@
 #pragma comment(lib, "../Release/libwav.lib")
 #endif
 #endif
-#pragma warning(disable: 4996)
+
+#pragma warning(disable: 4996)	//unsafe fopen
 
 #include	<iostream>
 #include	<fstream>
@@ -25,6 +26,10 @@
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846  /* pi */
+#endif
+
+#ifndef BYTE
+typedef unsigned char BYTE;
 #endif
 
 #ifndef byte
@@ -77,7 +82,7 @@ struct WAVE_H_PCM
 	WAVE_CHUNK* chunks;
 };
 
-static const char WAVE_MEDIASUBTYPE_PCM[16]
+static const unsigned char WAVE_MEDIASUBTYPE_PCM[16]
 {
 	0x00, 0x00, 0x00, 0x01,
 		0x00, 0x00,
@@ -109,7 +114,7 @@ struct WAVE_H_EXTENDED
 struct memblock
 {
 	uintptr_t p;
-	int nBytes;
+	unsigned int nBytes;
 };
 
 
@@ -160,7 +165,7 @@ public:
 
 	bool hasNext();
 	DFTResult* next();
-	int nSamples;
+	
 private:
 	memblock memory;
 	int k;
@@ -168,6 +173,7 @@ private:
 	int nChannels;
 	int nSamplesPerSecond;
 	int bytesPerSecond;
+	int nSamples;
 
 	DFTResult result;
 
@@ -185,10 +191,7 @@ public:
 
 	WAVE_H* getH(){ return h; }
 	
-	byte* get_data_p()
-	{
-		return ((byte*)data) + sizeof(WAVE_CHUNK);
-	}
+	byte* get_data_p(){ return ((byte*)data) + sizeof(WAVE_CHUNK); }
 
 	memblock* next();
 	memblock* next(int nBlocks);
@@ -238,3 +241,4 @@ protected:
 
 /** Radians to Degrees **/
 #define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )
+
