@@ -3,4 +3,5 @@
 #include	"libwav.h"
 %}
 
-#include	"libwav.h"
+%include	<windows.i>
+%include	"libwav.h"
