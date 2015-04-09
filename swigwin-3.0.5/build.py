@@ -7,6 +7,10 @@ import configparser
 config = configparser.ConfigParser()
 config.read(path + os.sep + "config.ini")
 
+newpath = config["output"]["target_wrapper_dir"]
+if not os.path.exists(newpath): os.makedirs(newpath)
+
+
 swig_script = "swig %s %s -o %s %s" % \
               (\
                   config["input"]["-c++"], \

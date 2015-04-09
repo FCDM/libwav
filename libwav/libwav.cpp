@@ -6,6 +6,8 @@
 
 using namespace std;
 
+#pragma warning(disable: 4244)	//precision lost
+
 Wave::Wave(string filename)
 {
 	FILE *f = fopen(filename.c_str(), "rb");
@@ -95,6 +97,36 @@ memblock* Wave::next(int nBlocks)
 
 	return &mem;
 }
+
+void Wave::DFTWindowTransform(memblock& memory, std::function<double(int)> transform)
+{
+	int nChannels = h->nChannels;
+	int nSamples = memory.nBytes / (h->wBitsPerSample / 8 * h->nChannels);
+	int bytesPerSecond = h->wBitsPerSample / 8;
+
+	for (int index = 0; index < nSamples; index++)
+		switch (bytesPerSecond)
+	{
+		case 1:
+			*(int8_t*)(memory.p + index*nChannels*bytesPerSecond) *= transform(index);
+			break;
+		case 2:
+			*(int16_t*)(memory.p + index*nChannels*bytesPerSecond) *= transform(index);
+			break;
+		case 3:
+			((int24*)(memory.p + index*nChannels*bytesPerSecond))->data *= transform(index);
+			break;
+		case 4:
+			*(int32_t*)(memory.p + index*nChannels*bytesPerSecond) *= transform(index);
+			break;
+		default:
+			throw new std::exception("unsupported");
+	}
+
+	return;
+}
+
+
 
 DFTransform::DFTransform(memblock memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond)
 {

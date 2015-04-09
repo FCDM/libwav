@@ -23,6 +23,7 @@
 #include	<cstdint>
 #include	<string>
 #include	<cmath>
+#include	<functional>
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846  /* pi */
@@ -208,7 +209,7 @@ public:
 		memset(&m, 0, sizeof(memblock));
 		m.p = (uintptr_t)get_data_p();
 		m.nBytes = data->ckSize;
-		return DFT(m, 0);
+		return DFT(m);
 	}
 
 	DFTransform* DFT(int k)
@@ -220,15 +221,56 @@ public:
 		return DFT(m, k);
 	}
 
+	DFTransform* DFT(memblock& m)
+	{
+		return DFT(m, 0);
+	}
+
 	DFTransform* DFT(memblock& m, int k)
 	{
 		return new DFTransform(m, m.nBytes / (h->wBitsPerSample / 8 * h->nChannels), h->nChannels, h->nSamplesPerSec, h->wBitsPerSample / 8);
+	}
+
+	//Triangle = Bartlett
+	enum DFTWindowType
+	{
+		Rectangular, Triangle, Hamming, Hanning, Blackman, BlackmanHarris
+	};
+
+	memblock& DFTWindow(memblock& m, DFTWindowType type)
+	{
+		double N = m.nBytes / (h->wBitsPerSample / 8 * h->nChannels);
+		switch (type)
+		{
+		case Rectangular:
+			break;
+		case Triangle:
+			DFTWindowTransform(m, [&](int index){return 1.0f - abs((index - ((N - 1.0f) / 2.0f)) / ((N - 1.0f) / 2.0f)); });
+			break;
+		case Hamming:
+			DFTWindowTransform(m, [&](int index){return 0.54f - (0.46f * cos(index / N)); });
+			break;
+		case Hanning:
+			DFTWindowTransform(m, [&](int index){return 0.5f * (1.0f - cos(index / N)); });
+			break;
+		case Blackman:
+			DFTWindowTransform(m, [&](int index){return 0.42f - (0.5f * cos(index / N)) + (0.08 * cos(2.0 * index / N)); });
+			break;
+		case BlackmanHarris:
+			DFTWindowTransform(m, [&](int index){return 0.35875f - (0.48829f * cos(1.0 * index / N)) + (0.14128f * cos(2.0 * index / N)) - (0.01168f * cos(3.0 * index / N)); });
+			break;
+		default:
+			;
+		}
+		return m;
 	}
 
 private:
 	void Wave_base_constructor(byte raw[]);	//unsafe
 	WAVE_H* h;
 	memblock mem;
+
+	void DFTWindowTransform(memblock& memory, std::function<double(int)> transform);
 
 protected:
 	byte* raw = nullptr;

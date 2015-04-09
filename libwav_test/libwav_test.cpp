@@ -67,6 +67,7 @@ VOID OnPaint(HDC hdc)
 		px++;
 	}
 	
+	w.DFTWindow(*mem, Wave::DFTWindowType::Hanning);
 	DFTransform* dft = w.DFT(*mem, 0);
 	DFTransform::DFTResult* dftr;
 
@@ -91,6 +92,7 @@ VOID OnPaint(HDC hdc)
 		else graphics.DrawLine(&power, i - 1, scrH/2 - val, i, scrH/2 - val);
 		prev = scrH/2 - val;
 
+		//angle
 		//odd function
 		int vali = radiansToDegrees(dftr->angle);
 		if (i != 0)graphics.DrawLine(&green, i - 1, previ, i, scrH / 2 - vali);
