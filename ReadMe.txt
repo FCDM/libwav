@@ -10,3 +10,12 @@ Done Compiling.
 
 *if you don't need a swig wrapping, simply remove the dependency in vs solution.
 
+
+Before you push, delete the followings if present:
+./libwav.sdf
+./ipch folder
+./Debug ./Release ... folders
+./libwav/Debug ./libwav/Release ./libwav_test/Debug ./libwav_test/Release ... folders
+./libwav/libwav_wrap.cpp
+./swigwin-3.0.5/wrapper folder
+

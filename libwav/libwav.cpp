@@ -8,6 +8,7 @@ using namespace std;
 
 #pragma warning(disable: 4244)	//precision lost
 
+
 Wave::Wave(string filename)
 {
 	FILE *f = fopen(filename.c_str(), "rb");
@@ -127,57 +128,88 @@ void Wave::DFTWindowTransform(memblock& memory, std::function<double(int)> trans
 }
 
 
-
-DFTransform::DFTransform(memblock memory, int nSamples, int nChannels, int nSamplesPerSecond, int bytesPerSecond)
+double Wave::BPMc(double* ta, double* tb, double* l, double* j, double* tl, double* tj, int nSamples, int maxAmp, int BPM)
 {
-	this->memory = memory;
-	this->k = 0;
-	this->nSamples = nSamples;
-	this->nChannels = nChannels;
-	this->nSamplesPerSecond = nSamplesPerSecond;
-	this->bytesPerSecond = bytesPerSecond;
-}
+	int Ti = getTi(BPM);
 
-DFTransform::DFTResult* DFTransform::next()
-{
-	if (!hasNext()) return nullptr;
-	memset(&result, 0, sizeof(DFTResult));
-	result.k = k;
-	double xn, theta;
-	for (int n = 0; n < nSamples; n++)
+	for (int k = 0; k < nSamples; k++)
 	{
-		switch (bytesPerSecond)
-		{
-		case 1:
-			xn = *(int8_t*)(memory.p + n*nChannels*bytesPerSecond);
-			break;
-		case 2:
-			xn = *(int16_t*)(memory.p + n*nChannels*bytesPerSecond);
-			break;
-		case 3:
-			xn = ((int24*)(memory.p + n*nChannels*bytesPerSecond))->data;
-			break;
-		case 4:
-			xn = *(int32_t*)(memory.p + n*nChannels*bytesPerSecond);
-			break;
-		default:
-			throw new std::exception("unsupported");
-		}
-		theta = (2 * M_PI * k * n / nSamples);
-		result.real += (xn * std::cos(theta));
-		result.imag -= (xn * std::sin(theta));
+		if ((k % Ti) == 0)
+			l[k] = j[k] = maxAmp;
+		else
+			l[k] = j[k] = 0;
 	}
-	result.freq = k * nSamplesPerSecond / nSamples;
-	result.mag = pow(result.real * result.real + result.imag * result.imag, 0.5);
-	result.angle = std::atan2(result.imag, result.real);
-	result.dbmag = log10(result.mag) * 20;
-	k++;
 
-	return &result;
+	FFTransform::ComplexFFT(l, j, nSamples, tl, tj);
+
+	double e = 0;
+	for (int k = 0; k < nSamples; k++)
+	{
+		double real = ta[k] * tl[k] - tb[k] * tj[k];
+		double imag = ta[k] * tj[k] + tb[k] * tl[k];
+		e += pow(real*real + imag*imag, 0.5);
+	}
+
+	return e;
 }
 
-bool DFTransform::hasNext()
+int Wave::detectBPM(memblock& m, int startBPM, int endBPM, int stepBPM)
 {
-	return memory.p + nSamples*nChannels*bytesPerSecond >= memory.nBytes && k < nSamples;
+	Stereo& stereo = *getStereoObject(m);
+
+	int nSamples = (int)stereo.getnSamples();
+	double* a = (double*)malloc(nSamples*sizeof(double));
+	double* b = (double*)malloc(nSamples*sizeof(double));
+
+	int i = 0;
+	do
+	{
+		a[i] = stereo.getLeft();
+		b[i] = stereo.getRight();
+		i++;
+	} while (stereo.next());
+
+
+	//derivation filter
+	//for (int k = 1; k <= nSamples - 2; k++)
+	//{
+	//	a[k] = 0.5*(h->nSamplesPerSec)*(a[k + 1] - a[k - 1]);
+	//	b[k] = 0.5*(h->nSamplesPerSec)*(b[k + 1] - b[k - 1]);
+	//}
+
+	double* ta = (double*)malloc(nSamples*sizeof(double));
+	double* tb = (double*)malloc(nSamples*sizeof(double));
+	double* l = (double*)malloc(nSamples*sizeof(double));
+	double* j = (double*)malloc(nSamples*sizeof(double));
+	double* tl = (double*)malloc(nSamples*sizeof(double));
+	double* tj = (double*)malloc(nSamples*sizeof(double));
+
+	FFTransform::ComplexFFT(a, b, nSamples, ta, tb);
+
+	int BPMmax = -1;
+	double maxT = -DBL_MAX;
+
+	for (int bpm = startBPM; bpm < endBPM; bpm += stepBPM)
+	{
+		double t = BPMc(ta, tb, l, j, tl, tj, nSamples, stereo.maxAmp(), bpm);
+		if (t > maxT)
+		{
+			maxT = t;
+			BPMmax = bpm;
+		}
+	}
+
+	free(a);
+	free(b);
+	free(ta);
+	free(tb);
+	free(l);
+	free(j);
+	free(tl);
+	free(tj);
+	delete &stereo;
+
+
+	return BPMmax;
 }
 

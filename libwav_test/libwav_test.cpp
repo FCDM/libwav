@@ -10,7 +10,7 @@ Wave w("sound.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
 HWND g_hWnd;
-int scrW=800;
+int scrW=800+14+200+24+1;
 int scrH=600;
 
 double scaleRange(double in, double oldMin, double oldMax, double newMin, double newMax)
@@ -20,7 +20,7 @@ double scaleRange(double in, double oldMin, double oldMax, double newMin, double
 
 int freqdiff = 0;
 
-VOID OnPaint(HDC hdc)
+VOID OnPaint(HWND hWnd, HDC hdc)
 {
 	Graphics graphics(hdc);
 	Pen      pen(Color::Red);
@@ -66,17 +66,34 @@ VOID OnPaint(HDC hdc)
 		py = newy;
 		px++;
 	}
-	
-	w.DFTWindow(*mem, Wave::DFTWindowType::Hanning);
-	DFTransform* dft = w.DFT(*mem, 0);
-	DFTransform::DFTResult* dftr;
+
+	memblock bpmmem;
+	bpmmem.p = (uintptr_t)w.get_data_p();
+	bpmmem.nBytes = w.get_data_size();
+	int bpm = w.detectBPM(bpmmem, 60, 180, 10);
+
+	std::wstringstream sstream;
+	sstream << bpm;
+	MessageBox(hWnd, sstream.str().c_str(), L"BPM", MB_SYSTEMMODAL);
+
+	//w.DFTWindow(*mem, Wave::DFTWindowType::Hanning);
+
+
+	//DFTransform* dft = w.DFT(*mem);
+
+	//DFTransform::DFTChannelResult* dftr;
+
+	FFTransform* fft = w.FFT(*mem);
+
+	FFTransform::DFTChannelResult* dftr;
 
 	int prev = 0;
 	int previ = 0;
 
 	for (int i = 0; i < scrW; i++)
 	{
-		dftr = dft->next();
+		//dftr = &(dft->next(DFTransform::nextResult::STEREO)->stereo);
+		dftr = &(fft->next(FFTransform::nextResult::STEREO)->stereo);
 		if (dftr == nullptr) return;
 		if (i == 1)
 		{
@@ -103,6 +120,8 @@ VOID OnPaint(HDC hdc)
 		graphics.DrawLine(&power, i, scrH, i, scrH - 100*dftr->real);
 		graphics.DrawLine(&green, i, scrH, i, scrH - 100*dftr->imag);*/
 	}
+	delete fft;
+	//delete dft;
 }
 
 
@@ -248,22 +267,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	SolidBrush brush(Color::Black);
 	Gdiplus::Rect* rect_p;
 
-	if (message != WM_PAINT && message != WM_KEYUP)
-	{
-		hdc = BeginPaint(hWnd, &ps);
-		g_p = new Graphics(hdc);
-		rect_p = new Rect(0, 0, 10 * 10, 24);
-		g_p->FillRectangle(new SolidBrush(Color::White), *rect_p);
+	//if (message != WM_PAINT && message != WM_KEYUP)
+	//{
+	//	hdc = BeginPaint(hWnd, &ps);
+	//	g_p = new Graphics(hdc);
+	//	rect_p = new Rect(0, 0, 10 * 10, 24);
+	//	g_p->FillRectangle(new SolidBrush(Color::White), *rect_p);
 
-		POINT scr;
-		scr.x = 0;
-		scr.y = 0;
-		ClientToScreen(hWnd, &scr);
-		
-		g_p->DrawString((std::wstring(L"Freq: ")+std::to_wstring(freqdiff*(p.x-scr.x))).c_str(), -1, &font, PointF(0, 0), &brush);
-		EndPaint(hWnd, &ps);
-		InvalidateRect(hWnd, NULL, FALSE);
-	}
+	//	POINT scr;
+	//	scr.x = 0;
+	//	scr.y = 0;
+	//	ClientToScreen(hWnd, &scr);
+	//	
+	//	g_p->DrawString((std::wstring(L"Freq: ")+std::to_wstring(freqdiff*(p.x-scr.x))).c_str(), -1, &font, PointF(0, 0), &brush);
+	//	EndPaint(hWnd, &ps);
+	//	InvalidateRect(hWnd, NULL, FALSE);
+	//}
 
 	switch (message)
 	{
@@ -292,7 +311,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_PAINT:
 		hdc = BeginPaint(hWnd, &ps);
-		if (!isPaused) OnPaint(hdc);
+		if (!isPaused) OnPaint(hWnd, hdc);
 		EndPaint(hWnd, &ps);
 		InvalidateRect(hWnd, NULL, FALSE);
 		break;
