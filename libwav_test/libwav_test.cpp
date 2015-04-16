@@ -9,6 +9,10 @@ Wave w("sound.wav");
 //Wave w("16bit_signed_pcm.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
+
+WASAPI::Audio audio(w, 0, 0);
+
+
 HWND g_hWnd;
 int scrW=800+14+200+24+1;
 int scrH=600;
@@ -28,8 +32,10 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 	Pen power(Color::Blue);
 	Pen green(Color::Green);
 	
-	memblock* mem = w.next(scrW);
+	memblock* mem = w.next(audio.framesAvailable());
+	audio.fillBuffer();
 	if (mem->nBytes == 0) return;
+	//return;	//Comment this to enable sound wave rendering
 
 	graphics.Clear(Color::White);
 	graphics.DrawLine(&axis, 0, scrH / 2, scrW, scrH / 2);
@@ -67,14 +73,14 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 		px++;
 	}
 
-	memblock bpmmem;
-	bpmmem.p = (uintptr_t)w.get_data_p();
-	bpmmem.nBytes = w.get_data_size();
-	int bpm = w.detectBPM(bpmmem, 60, 180, 10);
+	//memblock bpmmem;
+	//bpmmem.p = (uintptr_t)w.get_data_p();
+	//bpmmem.nBytes = w.get_data_size();
+	//int bpm = w.detectBPM(bpmmem, 60, 180, 10);
 
-	std::wstringstream sstream;
-	sstream << bpm;
-	MessageBox(hWnd, sstream.str().c_str(), L"BPM", MB_SYSTEMMODAL);
+	//std::wstringstream sstream;
+	//sstream << bpm;
+	//MessageBox(hWnd, sstream.str().c_str(), L"BPM", MB_SYSTEMMODAL);
 
 	//w.DFTWindow(*mem, Wave::DFTWindowType::Hanning);
 
@@ -83,45 +89,45 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 
 	//DFTransform::DFTChannelResult* dftr;
 
-	FFTransform* fft = w.FFT(*mem);
-
-	FFTransform::DFTChannelResult* dftr;
-
-	int prev = 0;
-	int previ = 0;
-
-	for (int i = 0; i < scrW; i++)
-	{
-		//dftr = &(dft->next(DFTransform::nextResult::STEREO)->stereo);
-		dftr = &(fft->next(FFTransform::nextResult::STEREO)->stereo);
-		if (dftr == nullptr) return;
-		if (i == 1)
-		{
-			freqdiff = dftr->freq;
-			
-		}
-
-
-		//Spectral magnitude in dB
-		//even function
-		int val = 1 * (dftr->dbmag);
-		if (i != 0)graphics.DrawLine(&power, i - 1, prev, i, scrH/2 - val);
-		else graphics.DrawLine(&power, i - 1, scrH/2 - val, i, scrH/2 - val);
-		prev = scrH/2 - val;
-
-		//angle
-		//odd function
-		int vali = radiansToDegrees(dftr->angle);
-		if (i != 0)graphics.DrawLine(&green, i - 1, previ, i, scrH / 2 - vali);
-		else graphics.DrawLine(&green, i - 1, scrH / 2 - previ, i, scrH / 2 - vali);
-		previ = scrH / 2 - vali;
-
-/*
-		graphics.DrawLine(&power, i, scrH, i, scrH - 100*dftr->real);
-		graphics.DrawLine(&green, i, scrH, i, scrH - 100*dftr->imag);*/
-	}
-	delete fft;
-	//delete dft;
+//	FFTransform* fft = w.FFT(*mem);
+//
+//	FFTransform::DFTChannelResult* dftr;
+//
+//	int prev = 0;
+//	int previ = 0;
+//
+//	for (int i = 0; i < scrW; i++)
+//	{
+//		//dftr = &(dft->next(DFTransform::nextResult::STEREO)->stereo);
+//		dftr = &(fft->next(FFTransform::nextResult::STEREO)->stereo);
+//		if (dftr == nullptr) return;
+//		if (i == 1)
+//		{
+//			freqdiff = dftr->freq;
+//			
+//		}
+//
+//
+//		//Spectral magnitude in dB
+//		//even function
+//		int val = 1 * (dftr->dbmag);
+//		if (i != 0)graphics.DrawLine(&power, i - 1, prev, i, scrH/2 - val);
+//		else graphics.DrawLine(&power, i - 1, scrH/2 - val, i, scrH/2 - val);
+//		prev = scrH/2 - val;
+//
+//		//angle
+//		//odd function
+//		int vali = radiansToDegrees(dftr->angle);
+//		if (i != 0)graphics.DrawLine(&green, i - 1, previ, i, scrH / 2 - vali);
+//		else graphics.DrawLine(&green, i - 1, scrH / 2 - previ, i, scrH / 2 - vali);
+//		previ = scrH / 2 - vali;
+//
+///*
+//		graphics.DrawLine(&power, i, scrH, i, scrH - 100*dftr->real);
+//		graphics.DrawLine(&green, i, scrH, i, scrH - 100*dftr->imag);*/
+//	}
+//	delete fft;
+//	//delete dft;
 }
 
 

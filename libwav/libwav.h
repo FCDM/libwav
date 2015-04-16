@@ -17,7 +17,7 @@
 #endif
 
 #pragma warning(disable: 4996)	//unsafe fopen
-//#define __WASAPI_INCLUDED__
+#define __WASAPI_INCLUDED__
 
 #include	<iostream>
 #include	<fstream>
@@ -28,16 +28,23 @@
 #include	<functional>
 #include	<limits>
 
+
+
 //WASAPI
 #ifdef __WASAPI_INCLUDED__
+#include	<Mmdeviceapi.h>
 #include	<Audioclient.h>
 #include	<Audiopolicy.h>
+
+
 #else	// !__WASAPI_INCLUDED__
 static const uint16_t WAVE_FORMAT_PCM = 1;	//ACCEPT
 static const uint16_t WAVE_FORMAT_IEEE_FLOAT = 3;	//DIE
 static const uint16_t WAVE_FORMAT_ALAW = 6;	//DIE
 static const uint16_t WAVE_FORMAT_MULAW = 7;	//DIE
 static const uint16_t WAVE_FORMAT_EXTENSIBLE = 0xFFFE;	//ACCEPT
+
+
 #endif
 
 
@@ -321,65 +328,6 @@ protected:
 };
 
 
-///*
-//ComplexDFT
-//
-//X(k) = foreach(n:0->N-1)x(n)cos(2pi*k*n/N) - foreach(n:0->N-1)x(n)sin(2pi*k*n/N) * i
-//
-//let x(n) = a+bi, let theta = 2pi*k*n/N
-//X(k) = foreach(n:0->N-1)(a*cos(theta) + b*sin(theta)) - i * foreach(n:0->N-1)(a*sin(theta) - b*cos(theta))
-//
-//when b = 0, ComplexDFT = DFT
-//
-//*/
-//class ComplexDFTransform
-//{
-//public:
-//	typedef DFTransform::DFTResult ComplexDFTResult;
-//	typedef DFTransform::DFTChannelResult ComplexDFTChannelResult;
-//
-//	ComplexDFTransform(double real[], double imag[], int nSamples)
-//	{
-//		this->real = real;
-//		this->imag = imag;
-//		this->nSamples = nSamples;
-//	}
-//
-//	bool hasNext() const
-//	{
-//		return k < nSamples;
-//	}
-//
-//	ComplexDFTChannelResult* next()
-//	{
-//		if (!hasNext()) return nullptr;
-//		memset(&result, 0, sizeof(result));
-//		double theta;
-//
-//		for (int n = 0; n < nSamples; n++)
-//		{
-//			double a = real[n];
-//			double b = imag[n];
-//			theta = (2 * M_PI * k * n / nSamples);
-//
-//			result.real += a*cos(theta) + b*sin(theta);
-//			result.imag -= a*sin(theta) - b*cos(theta);
-//		}
-//
-//		k++;
-//		return &result;
-//	}
-//
-//protected:
-//	double* real;
-//	double* imag;
-//	int nSamples;
-//
-//	int k = 0;
-//	ComplexDFTChannelResult result;
-//};
-
-
 //raw PCM data is a continuous sampling of sound amplitudes
 class LIBWAV_API Wave 
 {
@@ -396,6 +344,10 @@ public:
 
 	memblock* next();
 	memblock* next(int nBlocks);
+	memblock* getLastNextResult()
+	{
+		return &mem;
+	}
 
 	DFTransform* DFT(memblock& m){ return new DFTransform(*getStereoObject(m), h->nSamplesPerSec); }
 	FFTransform* FFT(memblock& m){ return new FFTransform(*getStereoObject(m), h->nSamplesPerSec); }
@@ -462,6 +414,14 @@ public:
 	int detectBPM(memblock& m, int startBPM, int endBPM, int stepBPM);
 
 
+	WAVEFORMATEX getWaveFormatEx()
+	{
+		WAVEFORMATEX wave;
+		memcpy(&wave, &h->wFormatTag, sizeof(wave));
+		wave.cbSize = 0;
+		return wave;
+	}
+
 
 private:
 	void Wave_base_constructor(byte raw[]);	//unsafe
@@ -484,4 +444,80 @@ protected:
 
 /** Radians to Degrees **/
 #define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )
+
+
+
+
+//WASAPI
+#define RELEASEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) ptr->Release();\
+	ptr = nullptr;\
+				}
+
+#define DELETEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) delete ptr;\
+	ptr = nullptr;\
+		}
+
+
+namespace WASAPI
+{
+
+	class LIBWAV_API Audio
+	{
+	public:
+		WAVEFORMATEX getWaveFormat(){ return waveFormat; }
+
+	public:
+		Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration, REFERENCE_TIME hnsPeriodicity);	//nano seconds
+
+		~Audio()
+		{
+			Release();
+		}
+
+	public:
+		/*
+		audioContent->next(audio.framesAvailable());
+		nBlocks of data the stream could/should load now, shall match the call to audioContent->next(int)
+		*/
+		int framesAvailable();
+
+		/*
+		fill the stream buffer
+		this function collects data right from audioContent, it looks at the last call to audioContent->next(int)
+		*/
+		bool fillBuffer(){ return fillBuffer(audioContent->getLastNextResult()); }
+
+		/*
+		fill the stream buffer
+		this function uses the given memblock with the audioContent's format information
+		*/
+		bool fillBuffer(memblock* mem);
+
+	protected:
+		void selectDefaultAudioDevice(WAVEFORMATEX* format);	//(re) init. WAS interfaces
+
+		void Release();	//Release Allocated Resources
+
+	protected:
+		HRESULT hr = S_OK;
+		Wave* audioContent;
+		WAVEFORMATEX waveFormat;
+		REFERENCE_TIME hnsBufferDuration;
+		REFERENCE_TIME hnsPeriodicity;
+		uint32_t bufferFrameCount;
+
+	protected:
+		IMMDeviceEnumerator* pEnumerator;
+		IMMDevice* pDevice;
+		IAudioClient* pAudioClient;
+
+	protected:
+		IAudioClock* pAudioClock;
+		IAudioRenderClient* pAudioRenderClient;
+		IAudioStreamVolume* pAudioStreamVolume;
+	};
+}
+
 
