@@ -39,6 +39,7 @@ bool WASAPI::Audio::fillBuffer(memblock* mem)
 	byte* ptr;
 	if (nBlocks == 0)
 	{
+		if (mem->p >= (uintptr_t)(audioContent->get_data_size() + audioContent->get_data_p()))pAudioClient->Stop();;
 		return false;
 	}
 	hr = pAudioRenderClient->GetBuffer(nBlocks, &ptr);
