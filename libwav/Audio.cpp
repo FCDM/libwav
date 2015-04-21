@@ -68,8 +68,8 @@ void WASAPI::Audio::selectDefaultAudioDevice(WAVEFORMATEX* format)
 	pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)(&pAudioClient));
 
 	hr = pAudioClient->Initialize(
-		AUDCLNT_SHAREMODE_EXCLUSIVE,
-		0,
+		AUDCLNT_SHAREMODE_SHARED,
+		AUDCLNT_STREAMFLAGS_RATEADJUST,
 		hnsBufferDuration,
 		hnsPeriodicity,
 		format,

@@ -35,7 +35,7 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 	memblock* mem = w.next(audio.framesAvailable());
 	audio.fillBuffer();
 	if (mem->nBytes == 0) return;
-	//return;	//Comment this to enable sound wave rendering
+	return;	//Comment this to enable sound wave rendering
 
 	graphics.Clear(Color::White);
 	graphics.DrawLine(&axis, 0, scrH / 2, scrW, scrH / 2);
