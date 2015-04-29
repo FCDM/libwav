@@ -7,11 +7,10 @@ using namespace std;
 
 
 
-WASAPI::Audio::Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration, REFERENCE_TIME hnsPeriodicity)	//nano seconds
+WASAPI::Audio::Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration)	//nano seconds
 {
 	this->audioContent = &audioContent;
 	this->hnsBufferDuration = hnsBufferDuration;
-	this->hnsPeriodicity = hnsPeriodicity;
 
 	waveFormat = audioContent.getWaveFormatEx();
 	selectDefaultAudioDevice(&waveFormat);
@@ -71,7 +70,7 @@ void WASAPI::Audio::selectDefaultAudioDevice(WAVEFORMATEX* format)
 		AUDCLNT_SHAREMODE_SHARED,
 		AUDCLNT_STREAMFLAGS_RATEADJUST,
 		hnsBufferDuration,
-		hnsPeriodicity,
+		0,
 		format,
 		NULL);
 

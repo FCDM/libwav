@@ -10,7 +10,7 @@ Wave w("sound.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
 
-WASAPI::Audio audio(w, 0, 0);
+WASAPI::Audio audio(w, 0);
 
 
 HWND g_hWnd;

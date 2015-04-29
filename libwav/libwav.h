@@ -154,10 +154,10 @@ please go through function comments first
 class LIBWAV_API Stereo
 {
 public:
-	Stereo(WAVE_H* h, memblock single) : Stereo(1, h->wBitsPerSample / 8, single, single){}
-	Stereo(WAVE_H* h, memblock left, memblock right) : Stereo(2, h->wBitsPerSample / 8, left, right){}
+	Stereo(WAVE_H* h, memblock single) : Stereo(1, h->nSamplesPerSec, h->wBitsPerSample / 8, single, single){}
+	Stereo(WAVE_H* h, memblock left, memblock right) : Stereo(2, h->nSamplesPerSec, h->wBitsPerSample / 8, left, right){}
 
-	Stereo(int nChannels, int bytesPerSample, memblock left, memblock right)
+	Stereo(int nChannels, int bytesPerSample, int nSamplesPerSec, memblock left, memblock right)
 	{
 		this->nChannels = nChannels;
 		this->bytesPerSample = bytesPerSample;
@@ -165,6 +165,7 @@ public:
 		this->right = right;
 		if (nChannels == 2) this->right.p += bytesPerSample;	//stereo ptr fix
 		this->nSamples = left.nBytes / (bytesPerSample * nChannels);
+		this->nSamplesPerSec = nSamplesPerSec;
 	}
 	
 	//return true if the fetch is valid
@@ -174,7 +175,7 @@ public:
 	void reset(){ index = 0; }
 	uint64_t getIndex() const { return index; }
 	uint64_t getnSamples() const { return nSamples; }
-
+	int getnSamplesPerSec() const { return nSamplesPerSec; }
 
 	//getters
 	int32_t getLeft(){ return get(left); }
@@ -192,13 +193,15 @@ public:
 protected:
 	int32_t get(memblock& memory);
 	int32_t set(memblock& memory, int32_t val);
+
+protected:
 	uint64_t index = 0;
 	uint64_t nSamples;
 	int bytesPerSample;
 	int nChannels = 2;
 	memblock left;
 	memblock right;
-
+	int nSamplesPerSec;
 };
 
 
@@ -344,10 +347,7 @@ public:
 
 	memblock* next();
 	memblock* next(int nBlocks);
-	memblock* getLastNextResult()
-	{
-		return &mem;
-	}
+	memblock* getLastNextResult() {return &mem;}	//get the last next() result, the current block
 
 	DFTransform* DFT(memblock& m){ return new DFTransform(*getStereoObject(m), h->nSamplesPerSec); }
 	FFTransform* FFT(memblock& m){ return new FFTransform(*getStereoObject(m), h->nSamplesPerSec); }
@@ -400,6 +400,8 @@ public:
 		return m;
 	}
 
+	int nSamplesPerSec() { return h->nSamplesPerSec; }
+
 
 	/*
 	Detect the BPM in the given block of memory
@@ -413,7 +415,6 @@ public:
 	*/
 	int detectBPM(memblock& m, int startBPM, int endBPM, int stepBPM);
 
-
 	WAVEFORMATEX getWaveFormatEx()
 	{
 		WAVEFORMATEX wave;
@@ -423,7 +424,7 @@ public:
 	}
 
 
-private:
+private:	
 	void Wave_base_constructor(byte raw[]);	//unsafe
 	WAVE_H* h;
 	memblock mem;
@@ -446,6 +447,68 @@ protected:
 #define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )
 
 
+#define FREEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) free(ptr);\
+	ptr = nullptr;\
+								}
+
+
+class LIBWAV_API statBPM
+{
+public:
+	statBPM(Wave& wave, REFERENCE_TIME hnsBufferDuration)
+	{
+		this->wave = &wave;
+		double nSecOfBuffer = hnsBufferDuration * pow(1, -9);
+		nSamplesOfBuffer = (int)(nSecOfBuffer * wave.getH()->nSamplesPerSec);
+	}
+
+	bool isBeat(memblock& m)
+	{
+		Stereo* stereo = wave->getStereoObject(m);
+		double e = instant_e(stereo);
+		if (count < nSamplesOfBuffer)
+		{
+			
+			if (count + stereo->getnSamples() > nSamplesOfBuffer)
+			{
+				history_e = (
+					history_e * (count - (nSamplesOfBuffer - stereo->getnSamples())) +
+					e * stereo->getnSamples()
+					) / nSamplesOfBuffer;
+			}
+			else
+			{
+				history_e = (
+					history_e * count +
+					e * stereo->getnSamples()
+					) / (count + stereo->getnSamples());
+			}
+
+			count += stereo->getnSamples();
+
+			return false;
+		}
+		double f = history_e * stereo->getnSamples() / stereo->getnSamplesPerSec();
+		return e / f > 1.3;
+	}
+
+	double instant_e(Stereo* stereo)
+	{
+		return pow(stereo->getLeft(), 2) + pow(stereo->getRight(), 2);
+	}
+
+	~statBPM()
+	{
+	}
+
+private:
+	Wave* wave = nullptr;
+
+	double history_e = 0;
+	int nSamplesOfBuffer = 0;
+	uint64_t count = 0;
+};
 
 
 //WASAPI
@@ -469,7 +532,7 @@ namespace WASAPI
 		WAVEFORMATEX getWaveFormat(){ return waveFormat; }
 
 	public:
-		Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration, REFERENCE_TIME hnsPeriodicity);	//nano seconds
+		Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration);	//nano seconds
 
 		~Audio()
 		{
@@ -505,7 +568,6 @@ namespace WASAPI
 		Wave* audioContent;
 		WAVEFORMATEX waveFormat;
 		REFERENCE_TIME hnsBufferDuration;
-		REFERENCE_TIME hnsPeriodicity;
 		uint32_t bufferFrameCount;
 
 	protected:
