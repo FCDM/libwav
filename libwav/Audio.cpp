@@ -12,8 +12,7 @@ WASAPI::Audio::Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration)	//nan
 	this->audioContent = &audioContent;
 	this->hnsBufferDuration = hnsBufferDuration;
 
-	waveFormat = audioContent.getWaveFormatEx();
-	selectDefaultAudioDevice(&waveFormat);
+	selectDefaultAudioDevice(&audioContent);
 	pAudioClient->Start();
 }
 
@@ -25,7 +24,7 @@ int WASAPI::Audio::framesAvailable()
 	if (hr == AUDCLNT_E_DEVICE_INVALIDATED)
 	{
 		Release();
-		selectDefaultAudioDevice(&waveFormat);
+		selectDefaultAudioDevice(audioContent);
 		pAudioClient->Start();
 		return 0;
 	}
@@ -45,7 +44,7 @@ bool WASAPI::Audio::fillBuffer(memblock* mem)
 	if (hr == AUDCLNT_E_DEVICE_INVALIDATED)
 	{
 		Release();
-		selectDefaultAudioDevice(&waveFormat);
+		selectDefaultAudioDevice(audioContent);
 		pAudioClient->Start();
 		return false;
 	}
@@ -55,7 +54,7 @@ bool WASAPI::Audio::fillBuffer(memblock* mem)
 	return true;
 }
 
-void WASAPI::Audio::selectDefaultAudioDevice(WAVEFORMATEX* format)
+void WASAPI::Audio::selectDefaultAudioDevice(Wave* audioContent)
 {
 	hr = CoInitialize(NULL);
 	hr = CoCreateInstance(
@@ -66,13 +65,22 @@ void WASAPI::Audio::selectDefaultAudioDevice(WAVEFORMATEX* format)
 	pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
 	pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)(&pAudioClient));
 
-	hr = pAudioClient->Initialize(
-		AUDCLNT_SHAREMODE_SHARED,
-		AUDCLNT_STREAMFLAGS_RATEADJUST,
-		hnsBufferDuration,
-		0,
-		format,
-		NULL);
+	if (audioContent->isExtendedWave()) 
+		hr = pAudioClient->Initialize(
+			AUDCLNT_SHAREMODE_SHARED,
+			AUDCLNT_STREAMFLAGS_RATEADJUST,
+			hnsBufferDuration,
+			0,
+			&(audioContent->getWaveFormatExtensible()),
+			NULL);
+	else
+		hr = pAudioClient->Initialize(
+			AUDCLNT_SHAREMODE_SHARED,
+			AUDCLNT_STREAMFLAGS_RATEADJUST,
+			hnsBufferDuration,
+			0,
+			&(audioContent->getWaveFormatEx()),
+			NULL);
 
 	if (hr != S_OK) throw std::exception();
 
