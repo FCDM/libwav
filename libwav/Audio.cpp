@@ -65,13 +65,14 @@ void WASAPI::Audio::selectDefaultAudioDevice(Wave* audioContent)
 	pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
 	pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)(&pAudioClient));
 
+	WAVEFORMATEXTENSIBLE format = audioContent->getWaveFormatExtensible();
 	if (audioContent->isExtendedWave()) 
 		hr = pAudioClient->Initialize(
 			AUDCLNT_SHAREMODE_SHARED,
 			AUDCLNT_STREAMFLAGS_RATEADJUST,
 			hnsBufferDuration,
 			0,
-			&(audioContent->getWaveFormatExtensible()),
+			(WAVEFORMATEX*)&format,
 			NULL);
 	else
 		hr = pAudioClient->Initialize(

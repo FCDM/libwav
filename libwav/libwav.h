@@ -429,9 +429,9 @@ public:
 		w.cbSize = 22;
 		WAVEFORMATEXTENSIBLE ext;
 		memcpy(&ext, &w, sizeof(WAVEFORMATEX));
-		ext.wValidBitsPerSample = ((WAVE_H_EXTENDED*)h)->wValidBitsPerSample;
-		ext.wSamplesPerBlock = 0;
-		ext.wReserved = 0;
+		ext.Samples.wValidBitsPerSample = ((WAVE_H_EXTENDED*)h)->wValidBitsPerSample;
+		//ext.Samples.wSamplesPerBlock = 0;
+		//ext.Samples.wReserved = 0;
 		ext.dwChannelMask = ((WAVE_H_EXTENDED*)h)->dwChannelMask;
 		memcpy(&(ext.SubFormat), &(((WAVE_H_EXTENDED*)h)->SubFormat[0]), 16);
 		return ext;
