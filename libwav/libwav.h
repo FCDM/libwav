@@ -423,6 +423,24 @@ public:
 		return wave;
 	}
 
+	WAVEFORMATEXTENSIBLE getWaveFormatExtensible()
+	{
+		WAVEFORMATEX w = getWaveFormatEx();
+		w.cbSize = 22;
+		WAVEFORMATEXTENSIBLE ext;
+		memcpy(&ext, &w, sizeof(WAVEFORMATEX));
+		ext.wValidBitsPerSample = ((WAVE_H_EXTENDED*)h)->wValidBitsPerSample;
+		ext.wSamplesPerBlock = 0;
+		ext.wReserved = 0;
+		ext.dwChannelMask = ((WAVE_H_EXTENDED*)h)->dwChannelMask;
+		memcpy(&(ext.SubFormat), &(((WAVE_H_EXTENDED*)h)->SubFormat[0]), 16);
+		return ext;
+	}
+	
+	bool isExtendedWave()
+	{
+		return h->wFormatTag == WAVE_FORMAT_EXTENSIBLE;
+	}
 
 private:	
 	void Wave_base_constructor(byte raw[]);	//unsafe
