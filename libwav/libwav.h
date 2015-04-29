@@ -547,10 +547,7 @@ namespace WASAPI
 	class LIBWAV_API Audio
 	{
 	public:
-		WAVEFORMATEX getWaveFormat(){ return waveFormat; }
-
-	public:
-		Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration);	//nano seconds
+		Audio(Wave& audioContent, REFERENCE_TIME hnsBufferDuration);	//100 nano seconds
 
 		~Audio()
 		{
@@ -577,14 +574,13 @@ namespace WASAPI
 		bool fillBuffer(memblock* mem);
 
 	protected:
-		void selectDefaultAudioDevice(WAVEFORMATEX* format);	//(re) init. WAS interfaces
+		void selectDefaultAudioDevice(Wave* audioContent);	//(re) init. WAS interfaces
 
 		void Release();	//Release Allocated Resources
 
 	protected:
 		HRESULT hr = S_OK;
 		Wave* audioContent;
-		WAVEFORMATEX waveFormat;
 		REFERENCE_TIME hnsBufferDuration;
 		uint32_t bufferFrameCount;
 
