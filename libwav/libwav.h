@@ -157,7 +157,7 @@ public:
 	Stereo(WAVE_H* h, memblock single) : Stereo(1, h->nSamplesPerSec, h->wBitsPerSample / 8, single, single){}
 	Stereo(WAVE_H* h, memblock left, memblock right) : Stereo(2, h->nSamplesPerSec, h->wBitsPerSample / 8, left, right){}
 
-	Stereo(int nChannels, int bytesPerSample, int nSamplesPerSec, memblock left, memblock right)
+	Stereo(int nChannels, int nSamplesPerSec, int bytesPerSample, memblock left, memblock right)
 	{
 		this->nChannels = nChannels;
 		this->bytesPerSample = bytesPerSample;

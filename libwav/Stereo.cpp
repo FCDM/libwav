@@ -22,6 +22,10 @@ int32_t Stereo::get(memblock& memory)
 		return *(int32_t*)(memory.p + index*nChannels*bytesPerSample);
 		break;
 	default:
+		std::wstringstream ws;
+		ws << "Unsupported bytesPerSample: ";
+		ws << bytesPerSample;
+		MessageBox(0, ws.str().c_str(), L"err", 0);
 		throw new std::exception("unsupported");
 	}
 }
