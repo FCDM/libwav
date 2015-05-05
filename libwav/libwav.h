@@ -556,6 +556,10 @@ namespace WASAPI
 
 	public:
 		/*
+		Audio Playback Control
+		*/
+
+		/*
 		audioContent->next(audio.framesAvailable());
 		nBlocks of data the stream could/should load now, shall match the call to audioContent->next(int)
 		*/
@@ -572,6 +576,34 @@ namespace WASAPI
 		this function uses the given memblock with the audioContent's format information
 		*/
 		bool fillBuffer(memblock* mem);
+
+	public:
+		/*
+		Volume Control
+		*/
+
+		/*
+		get total channel(s) present in this session
+		*/
+		uint32_t getChannelCount(){ uint32_t t; pAudioStreamVolume->GetChannelCount(&t); return t; }
+
+		/*
+		get the percentage volume of the selected channel[0, getChannelCount()), from 0.0 to 1.0
+		*/
+		float getChannelVolume(uint32_t indxChannel)
+		{
+			float t;
+			pAudioStreamVolume->GetChannelVolume(indxChannel, &t);
+			return t;
+		}
+
+		/*
+		set the percentage volume of the selected channel[0, getChannelCount()), from 0.0 to 1.0
+		*/
+		void setChannelVolume(uint32_t indxChannel, const float volume)
+		{
+			pAudioStreamVolume->SetChannelVolume(indxChannel, volume);
+		}
 
 	protected:
 		void selectDefaultAudioDevice(Wave* audioContent);	//(re) init. WAS interfaces
