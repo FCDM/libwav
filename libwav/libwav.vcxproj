@@ -91,7 +91,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>python ../swigwin-3.0.5/build.py</Command>
+      <Command>../swigwin-3.0.5/build_without_config.bat</Command>
       <Message>Build Swig Wrapper</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -125,7 +125,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>python ../swigwin-3.0.5/build.py</Command>
+      <Command>../swigwin-3.0.5/build_without_config.bat</Command>
       <Message>Build Swig Wrapper</Message>
     </PreBuildEvent>
   </ItemDefinitionGroup>
