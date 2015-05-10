@@ -342,7 +342,7 @@ public:
 
 	WAVE_H* getH(){ return h; }
 	
-	byte* get_data_p(){ return ((byte*)data) + sizeof(WAVE_CHUNK); }
+	uintptr_t get_data_p(){ return (uintptr_t)((byte*)data) + sizeof(WAVE_CHUNK); }
 	int get_data_size() { return data->ckSize; }
 
 	memblock* next();

@@ -82,13 +82,13 @@ memblock* Wave::next(int nBlocks)
 {
 	int nBytes = nBlocks * h->nBlockAlign;
 
-	if (p_data == nullptr) p_data = get_data_p();
+	if (p_data == nullptr) p_data = (byte*)get_data_p();
 
 	mem.p = (uintptr_t)p_data;
 
-	if (p_data + nBytes > get_data_p() + data->ckSize)
+	if (p_data + nBytes > (byte*)get_data_p() + data->ckSize)
 	{
-		mem.nBytes = get_data_p() + data->ckSize - (p_data);
+		mem.nBytes = (byte*)get_data_p() + data->ckSize - (p_data);
 	}
 	else
 	{

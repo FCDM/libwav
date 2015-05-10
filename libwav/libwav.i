@@ -7,6 +7,7 @@
 %include	"std_string.i"
 %include	"stdint.i"
 %include	"cpointer.i"
+%include	"typemaps.i"
 %include	"std_except.i"
 %include	<windows.i>
 
