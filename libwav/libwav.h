@@ -456,6 +456,7 @@ public:
 		do
 		{
 			result += stereo1->getAvg() * stereo2->getAvg();
+			stereo1->next(); stereo2->next();
 		} while (length-- > 0);
 		return result;
 	}
