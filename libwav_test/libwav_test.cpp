@@ -34,6 +34,13 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 	
 	memblock* mem = w.next(audio.framesAvailable());
 	audio.fillBuffer();
+	Stereo* stereo = w.getStereoObject(*mem);
+	do
+	{
+		stereo->getAvg();
+	} while (stereo->next());
+
+	
 	if (mem->nBytes == 0) return;
 	return;	//Comment this to enable sound wave rendering
 
@@ -298,6 +305,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 	case WM_KEYUP:
 		if (wParam == 0x50) isPaused = !isPaused;
+		if (wParam == 0x50 - 1) w.reset();
 		break;
 	case WM_COMMAND:
 		wmId    = LOWORD(wParam);

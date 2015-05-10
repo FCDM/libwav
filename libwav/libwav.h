@@ -442,6 +442,24 @@ public:
 		return h->wFormatTag == WAVE_FORMAT_EXTENSIBLE;
 	}
 
+	void reset()
+	{
+		p_data = nullptr;
+	}
+
+	double correlation(memblock& mem1, memblock& mem2)
+	{
+		double result = 0;
+		Stereo* stereo1 = getStereoObject(mem1);
+		Stereo* stereo2 = getStereoObject(mem2);
+		uint64_t length = stereo1->getnSamples() > stereo2->getnSamples() ? stereo2->getnSamples() : stereo1->getnSamples();
+		do
+		{
+			result += stereo1->getAvg() * stereo2->getAvg();
+		} while (length-- > 0);
+		return result;
+	}
+
 private:	
 	void Wave_base_constructor(byte raw[]);	//unsafe
 	WAVE_H* h;
