@@ -27,7 +27,7 @@
 #include	<cmath>
 #include	<functional>
 #include	<limits>
-
+#include	<deque>
 
 
 //WASAPI
@@ -190,6 +190,11 @@ public:
 	//max value for signal
 	int32_t maxAmp() const;
 
+	double scale(int32_t data) const
+	{
+		return (double)data / maxAmp();
+	}
+
 protected:
 	int32_t get(memblock& memory);
 	int32_t set(memblock& memory, int32_t val);
@@ -345,6 +350,20 @@ public:
 	uintptr_t get_data_p(){ return (uintptr_t)((byte*)data) + sizeof(WAVE_CHUNK); }
 	int get_data_size() { return data->ckSize; }
 
+	bool hasNext()
+	{
+		return hasNext(1);
+	}
+
+	bool hasNext(int nBlocks)
+	{
+		if (p_data == nullptr) return true;
+		if (mem.p == 0) return true;
+		int nBytes = nBlocks * h->nBlockAlign;
+		if (mem.p + mem.nBytes + nBytes >= get_data_p() + get_data_size()) return false;
+		return true;
+	}
+
 	memblock* next();
 	memblock* next(int nBlocks);
 	memblock* getLastNextResult() {return &mem;}	//get the last next() result, the current block
@@ -489,65 +508,6 @@ protected:
 	ptr = nullptr;\
 								}
 
-
-class LIBWAV_API statBPM
-{
-public:
-	statBPM(Wave& wave, REFERENCE_TIME hnsBufferDuration)
-	{
-		this->wave = &wave;
-		double nSecOfBuffer = hnsBufferDuration * pow(1, -9);
-		nSamplesOfBuffer = (int)(nSecOfBuffer * wave.getH()->nSamplesPerSec);
-	}
-
-	bool isBeat(memblock& m)
-	{
-		Stereo* stereo = wave->getStereoObject(m);
-		double e = instant_e(stereo);
-		if (count < nSamplesOfBuffer)
-		{
-			
-			if (count + stereo->getnSamples() > nSamplesOfBuffer)
-			{
-				history_e = (
-					history_e * (count - (nSamplesOfBuffer - stereo->getnSamples())) +
-					e * stereo->getnSamples()
-					) / nSamplesOfBuffer;
-			}
-			else
-			{
-				history_e = (
-					history_e * count +
-					e * stereo->getnSamples()
-					) / (count + stereo->getnSamples());
-			}
-
-			count += stereo->getnSamples();
-
-			return false;
-		}
-		double f = history_e * stereo->getnSamples() / stereo->getnSamplesPerSec();
-		return e / f > 1.3;
-	}
-
-	double instant_e(Stereo* stereo)
-	{
-		return pow(stereo->getLeft(), 2) + pow(stereo->getRight(), 2);
-	}
-
-	~statBPM()
-	{
-	}
-
-private:
-	Wave* wave = nullptr;
-
-	double history_e = 0;
-	int nSamplesOfBuffer = 0;
-	uint64_t count = 0;
-};
-
-
 //WASAPI
 #define RELEASEIF_NONNULL(ptr) {\
 	if (ptr != nullptr) ptr->Release();\
@@ -558,6 +518,36 @@ private:
 	if (ptr != nullptr) delete ptr;\
 	ptr = nullptr;\
 		}
+
+
+class LIBWAV_API StatBeatDetection
+{
+public:
+	StatBeatDetection(Wave& wave, REFERENCE_TIME hnsPrecision = 250000, REFERENCE_TIME hnsBufferDuration = 10000000)
+	{
+		this->wave = &wave;
+		double nSamplesBuffer = (hnsBufferDuration*pow(10, -7)*wave.nSamplesPerSec());
+		double nSamplesPrecision = (hnsPrecision*pow(10, -7)*wave.nSamplesPerSec());
+		buffer = new std::deque<double>((int)(nSamplesBuffer / nSamplesPrecision), 1);
+		this->nSamplesPrecision = (int)nSamplesPrecision;
+	}
+
+	~StatBeatDetection(){ release(); }
+	void release(){ DELETEIF_NONNULL(buffer); }
+
+	virtual int length() const{ return wave->get_data_size() / ((wave->getH()->wBitsPerSample / 8)*wave->getH()->nChannels) / nSamplesPrecision; }
+
+	virtual bool hasNext() const{ return wave->hasNext(nSamplesPrecision); }
+	virtual double next();
+
+	int getPrecision() const { return nSamplesPrecision; }
+
+protected:
+	std::deque<double>* buffer = nullptr;
+	Wave* wave = nullptr;
+	int nSamplesPrecision;
+
+};
 
 
 namespace WASAPI

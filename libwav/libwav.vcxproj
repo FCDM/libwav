@@ -174,6 +174,7 @@
     <ClCompile Include="FFTransform.cpp" />
     <ClCompile Include="libwav.cpp" />
     <ClCompile Include="libwav_wrap.cpp" />
+    <ClCompile Include="StatBeatDetection.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

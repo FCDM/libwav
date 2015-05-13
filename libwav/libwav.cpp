@@ -40,6 +40,7 @@ Wave::Wave(byte raw[], int length)
 
 void Wave::Wave_base_constructor(byte raw[])
 {
+	memset(&(this->mem), 0, sizeof(this->mem));
 	this->raw = raw;
 	h = (WAVE_H*)raw;
 	if (memcmp(h->RIFFTag, "RIFF", 4) != 0 || memcmp(h->fmt_Tag, "fmt ", 4) != 0 || memcmp(h->WAVETag, "WAVE", 4)) { throw new exception("header check failed"); }

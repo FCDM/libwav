@@ -10,8 +10,10 @@ Wave w("sound.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
 
-WASAPI::Audio audio(w, 0);
+StatBeatDetection bd(w);
+bool* beats;
 
+WASAPI::Audio audio(w, 0);
 
 HWND g_hWnd;
 int scrW=800+14+200+24+1;
@@ -34,12 +36,18 @@ VOID OnPaint(HWND hWnd, HDC hdc)
 	
 	memblock* mem = w.next(audio.framesAvailable());
 	audio.fillBuffer();
-	Stereo* stereo = w.getStereoObject(*mem);
-	do
+	//graphics.Clear(Color::White);
+	
+	if (w.hasNext() && beats[(mem->p-w.get_data_p())/(w.getH()->wBitsPerSample/8)/(w.getH()->nChannels)/bd.getPrecision()] != false)
 	{
-		stereo->getAvg();
-	} while (stereo->next());
-
+		RECT rect;
+		rect.left = 0;
+		rect.top = 0;
+		rect.right = scrW;
+		rect.bottom = scrH;
+		DrawText(hdc, _T("BEAT"), -1, &rect, DT_CENTER);
+	}
+	else graphics.Clear(Color::White);
 	
 	if (mem->nBytes == 0) return;
 	return;	//Comment this to enable sound wave rendering
@@ -158,6 +166,34 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 {
 	UNREFERENCED_PARAMETER(hPrevInstance);
 	UNREFERENCED_PARAMETER(lpCmdLine);
+
+
+
+
+	beats = new bool[bd.length()];
+	int ttt = 0;
+	while (bd.hasNext())
+	{
+		double t = bd.next();
+		//std::wstringstream wss;
+		//wss << t;
+		//MessageBox(0, wss.str().c_str(), _T(""), 0);
+		beats[ttt++] = t;
+		//beats[ttt++] = bd.next();
+	}
+	
+	std::ofstream out("sound.wav.analyze", std::ios::out);
+	for (int i = 0; i < bd.length(); i++)
+	{
+		out << i * bd.getPrecision() << "\t" << beats[i] << std::endl;
+	}
+	out.close();
+
+	bd.release();
+	w.reset();
+
+
+
 
  	// TODO: Place code here.
 	MSG msg;
