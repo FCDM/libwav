@@ -10,7 +10,7 @@ Wave w("sound.wav");
 //Wave w("24bit_signed_pcm.wav");
 //Wave w("32bit_signed_pcm.wav");
 
-StatBeatDetection bd(w);
+StatBeatDetection bd(w, 750000, 10000000);
 bool* beats;
 
 WASAPI::Audio audio(w, 0);
@@ -182,6 +182,26 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 		//beats[ttt++] = bd.next();
 	}
 	
+	//int count = 0;
+	//for (int i = 0; i < bd.length(); i++)
+	//{
+	//	if (beats[i]) count++;
+	//	else if (count > 0)
+	//	{
+	//		if (count % 2 == 0) count--;
+	//		if (count == 0) continue;
+
+	//		for (int j = i - count; j < i; j++)
+	//		{
+	//			if (i - j == count / 2) beats[j] = true;
+	//			else beats[j] = false;
+	//		}
+
+	//		count = 0;
+	//	}
+	//	else count = 0;
+	//}
+
 	std::ofstream out("sound.wav.analyze", std::ios::out);
 	for (int i = 0; i < bd.length(); i++)
 	{

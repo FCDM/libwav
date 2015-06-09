@@ -53,6 +53,30 @@ static const uint16_t WAVE_FORMAT_EXTENSIBLE = 0xFFFE;	//ACCEPT
 #include	<vector>
 
 
+/** Degrees to Radian **/
+#define degreesToRadians( degrees ) ( ( degrees ) / 180.0 * M_PI )
+
+/** Radians to Degrees **/
+#define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )
+
+
+#define FREEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) free(ptr);\
+	ptr = nullptr;\
+								}
+
+//WASAPI
+#define RELEASEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) ptr->Release();\
+	ptr = nullptr;\
+				}
+
+#define DELETEIF_NONNULL(ptr) {\
+	if (ptr != nullptr) delete ptr;\
+	ptr = nullptr;\
+		}
+
+
 
 #ifndef M_PI
 #define M_PI           3.14159265358979323846  /* pi */
@@ -340,6 +364,8 @@ protected:
 class LIBWAV_API Wave 
 {
 public:
+	Wave(){}
+
 	Wave(std::string filename);
 
 	Wave(byte raw[], int length);
@@ -480,13 +506,13 @@ public:
 		return result;
 	}
 
-private:	
-	void Wave_base_constructor(byte raw[]);	//unsafe
+private:
 	WAVE_H* h;
 	memblock mem;
 
+protected:	
+	virtual void base_constructor(byte raw[], int length);	//unsafe
 	void DFTWindowTransform(memblock& memory, std::function<double(int)> transform);
-
 	int getTi(int BPM){ return (int)((double)60 / BPM * h->nSamplesPerSec); }
 	double BPMc(double* ta, double* tb, double* l, double* j, double* tl, double* tj, int nSamples, int maxAmp, int BPM);
 
@@ -496,34 +522,11 @@ protected:
 	byte* p_data = nullptr;
 };
 
-/** Degrees to Radian **/
-#define degreesToRadians( degrees ) ( ( degrees ) / 180.0 * M_PI )
-
-/** Radians to Degrees **/
-#define radiansToDegrees( radians ) ( ( radians ) * ( 180.0 / M_PI ) )
-
-
-#define FREEIF_NONNULL(ptr) {\
-	if (ptr != nullptr) free(ptr);\
-	ptr = nullptr;\
-								}
-
-//WASAPI
-#define RELEASEIF_NONNULL(ptr) {\
-	if (ptr != nullptr) ptr->Release();\
-	ptr = nullptr;\
-				}
-
-#define DELETEIF_NONNULL(ptr) {\
-	if (ptr != nullptr) delete ptr;\
-	ptr = nullptr;\
-		}
-
 
 class LIBWAV_API StatBeatDetection
 {
 public:
-	StatBeatDetection(Wave& wave, REFERENCE_TIME hnsPrecision = 250000, REFERENCE_TIME hnsBufferDuration = 10000000)
+	StatBeatDetection(Wave& wave, REFERENCE_TIME hnsPrecision = 750000, REFERENCE_TIME hnsBufferDuration = 10000000)
 	{
 		this->wave = &wave;
 		double nSamplesBuffer = (hnsBufferDuration*pow(10, -7)*wave.nSamplesPerSec());

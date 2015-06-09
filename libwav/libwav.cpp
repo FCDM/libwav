@@ -19,7 +19,7 @@ Wave::Wave(string filename)
 	fread(raw, 1, fsize, f);
 	fclose(f);
 
-	if (fsize > sizeof(WAVE_H)) Wave_base_constructor(raw);
+	if (fsize > sizeof(WAVE_H)) base_constructor(raw, fsize);
 	else throw new exception("length invalid");
 }
 
@@ -34,11 +34,11 @@ Wave::~Wave()
 
 Wave::Wave(byte raw[], int length)
 {
-	if (length > sizeof(WAVE_H)) Wave_base_constructor(raw);
+	if (length > sizeof(WAVE_H)) base_constructor(raw, length);
 	else throw new exception("length invalid");
 }
 
-void Wave::Wave_base_constructor(byte raw[])
+void Wave::base_constructor(byte raw[], int length)
 {
 	memset(&(this->mem), 0, sizeof(this->mem));
 	this->raw = raw;

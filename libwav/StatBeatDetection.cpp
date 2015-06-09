@@ -36,7 +36,7 @@ double StatBeatDetection::next()
 
 	double C = (-0.0025714*variance) + 1.5142857;
 	
-	if (C < 1) C = 1.0;
+	if (C < 1) C = 1.1;
 
 	return insEnergy >= C*histAvg;
 }
