@@ -1,9 +1,11 @@
-// The following ifdef block is the standard way of creating macros which make exporting 
+﻿// The following ifdef block is the standard way of creating macros which make exporting 
 // from a DLL simpler. All files within this DLL are compiled with the LIBWAV_EXPORTS
 // symbol defined on the command line. This symbol should not be defined on any project
 // that uses this DLL. This way any other project whose source files include this file see 
 // LIBWAV_API functions as being imported from a DLL, whereas this DLL sees symbols
 // defined with this macro as being exported.
+
+// Copyright © 2007 Charles Chen
 
 #ifdef LIBWAV_EXPORTS
 #define LIBWAV_API __declspec(dllexport)
@@ -91,25 +93,34 @@ typedef unsigned char BYTE;
 #endif
 
 
+/*
+24-bit integer type
+*/
 struct int24
 {
 	signed int data : 24;
 };
 
-
+/*
+Chunks after WAVE_H
+*/
 struct WAVE_CHUNK
 {
 	char ckID[4];
 	uint32_t ckSize;
 };
 
+/*
+The leading structure of a standard WAVE file, discribes general details of the sound
+*/
 struct WAVE_H
 {
 	char RIFFTag[4];
 	uint32_t fileLength;
 
 	char WAVETag[4];
-	//format chunk
+
+	//format chunk, ALWAYS PRESENT
 	char fmt_Tag[4];
 	uint32_t fmtSize;
 
@@ -124,6 +135,9 @@ struct WAVE_H
 
 };
 
+/*
+Standard PCM-Wave
+*/
 struct WAVE_H_PCM
 {
 	WAVE_H header;
@@ -131,6 +145,7 @@ struct WAVE_H_PCM
 	WAVE_CHUNK* chunks;
 };
 
+//uuid
 static const unsigned char WAVE_MEDIASUBTYPE_PCM[16]
 {
 	0x00, 0x00, 0x00, 0x01,
@@ -146,6 +161,9 @@ static const unsigned char WAVE_MEDIASUBTYPE_PCM[16]
 		0x71
 };
 
+/*
+WAVE_FORMAT_EXTENSIBLE type Wave file's extra details of the sound
+*/
 struct WAVE_H_EXTENDED
 {
 	WAVE_H header;
@@ -160,6 +178,9 @@ struct WAVE_H_EXTENDED
 	WAVE_CHUNK* chunks;
 };
 
+/*
+an area of memory with a pointer and a length
+*/
 struct memblock
 {
 	uintptr_t p;
@@ -214,6 +235,9 @@ public:
 	//max value for signal
 	int32_t maxAmp() const;
 
+	/*
+	Scales the given sample value into a percentage of the volume
+	*/
 	double scale(int32_t data) const
 	{
 		return (double)data / maxAmp();
@@ -268,7 +292,7 @@ public:
 		double imag;	//negative already	DFTResult->imag * (i)
 
 		//Analysis
-		double freq;	//x-axis
+		double freq;	//x-axis, this jumps in a constant value
 		double mag;		//y-axis
 		double angle;	//phase in rad
 
@@ -289,6 +313,11 @@ public:
 	}
 	~DFTransform(){ delete stereo; };
 
+	/*
+	iteration
+	if hasNext(), call next()
+	DFTChannelResult.k ++
+	*/
 	virtual bool hasNext() const;
 	enum nextResult{ LEFT, RIGHT, STEREO, ALL };
 	virtual DFTResult* next(){ return next(ALL); };
@@ -312,7 +341,9 @@ protected:
 
 /*
 FFT - Real
-
+See DFTransform
+Note: Cannot change the next() type once started iteration
+Note: Cannot specify ALL for next(), only LEFT, RIGHT, STEREO
 */
 class LIBWAV_API FFTransform : public DFTransform
 {
@@ -333,6 +364,9 @@ public:
 	static void ComplexFFT(double real[], double imag[], int nSamples, double outputr[], double outputi[]);
 
 
+	/*
+	See DFTransform
+	*/
 	virtual bool hasNext() const
 	{
 		if (real == nullptr) return true;
@@ -364,23 +398,30 @@ protected:
 class LIBWAV_API Wave 
 {
 public:
+	/* Generates an invalid Wave Object */
 	Wave(){}
 
+	/* File IO load the specified Wave File, invalid Wave file or length will throw an exception */
 	Wave(std::string filename);
 
+	/* Length is provided only for securing possible access violation, construct a wav file by a pointer to its memory address, INPLACE */
 	Wave(byte raw[], int length);
 	~Wave();
 
+	/* Return the leading structure of Wave */
 	WAVE_H* getH(){ return h; }
 	
+	/* Get the pointer at the first byte for actual data */
 	uintptr_t get_data_p(){ return (uintptr_t)((byte*)data) + sizeof(WAVE_CHUNK); }
 	int get_data_size() { return data->ckSize; }
 
+	/* Check if Wave already finished its iteration */
 	bool hasNext()
 	{
 		return hasNext(1);
 	}
 
+	/* Check if nBlocks is still available */
 	bool hasNext(int nBlocks)
 	{
 		if (p_data == nullptr) return true;
@@ -390,13 +431,16 @@ public:
 		return true;
 	}
 
+	/* Fetch the next chunk of blocks of samples from the wave source, INPLACE access */
 	memblock* next();
 	memblock* next(int nBlocks);
 	memblock* getLastNextResult() {return &mem;}	//get the last next() result, the current block
-
+	
+	/* Construct a DFTransform/FFTransform object, YOU ARE RESPONSIBLE FOR DELETING IT: delete p; */
 	DFTransform* DFT(memblock& m){ return new DFTransform(*getStereoObject(m), h->nSamplesPerSec); }
 	FFTransform* FFT(memblock& m){ return new FFTransform(*getStereoObject(m), h->nSamplesPerSec); }
 
+	/* Construct a Stereo object to wrap around memblocks, Wave-dependent */
 	Stereo* getStereoObject(memblock& m)
 	{
 		switch (h->nChannels)
@@ -416,7 +460,7 @@ public:
 		Rectangular, Triangle, Hamming, Hanning, Blackman, BlackmanHarris
 	};
 
-	//this function WILL change the original sound data
+	//INPLACE Windowing, manipulations to the input samples
 	memblock& DFTWindow(memblock& m, DFTWindowType type)
 	{
 		double N = m.nBytes / (h->wBitsPerSample / 8 * h->nChannels);
@@ -445,6 +489,7 @@ public:
 		return m;
 	}
 
+	/* Fetch nSamplesPerSec from header */
 	int nSamplesPerSec() { return h->nSamplesPerSec; }
 
 
@@ -460,6 +505,7 @@ public:
 	*/
 	int detectBPM(memblock& m, int startBPM, int endBPM, int stepBPM);
 
+	/* Build a WAVEFORMATEX structure, used by WASAPI */
 	WAVEFORMATEX getWaveFormatEx()
 	{
 		WAVEFORMATEX wave;
@@ -468,6 +514,7 @@ public:
 		return wave;
 	}
 
+	/* Build a WAVEFORMATEXTENSIBLE structure, used by WASAPI */
 	WAVEFORMATEXTENSIBLE getWaveFormatExtensible()
 	{
 		WAVEFORMATEX w = getWaveFormatEx();
@@ -482,16 +529,19 @@ public:
 		return ext;
 	}
 	
+	/* Check if this Wave is an extended wave*/
 	bool isExtendedWave()
 	{
 		return h->wFormatTag == WAVE_FORMAT_EXTENSIBLE;
 	}
 
+	/* Reset the iteration status, re-start iteration, PLEASE BE CAREFUL OF INPLACE ACCESSES*/
 	void reset()
 	{
 		p_data = nullptr;
 	}
 
+	/* Determine the alg. correlations between two memblocks(internally uses as Stereo) */
 	double correlation(memblock& mem1, memblock& mem2)
 	{
 		double result = 0;
@@ -511,21 +561,41 @@ private:
 	memblock mem;
 
 protected:	
+	/* Parse Actual Wave Header */
 	virtual void base_constructor(byte raw[], int length);	//unsafe
+	
+	/* Perform Windowing Transform according to std::function */
 	void DFTWindowTransform(memblock& memory, std::function<double(int)> transform);
+
+	/* detectBPM internals */
 	int getTi(int BPM){ return (int)((double)60 / BPM * h->nSamplesPerSec); }
 	double BPMc(double* ta, double* tb, double* l, double* j, double* tl, double* tj, int nSamples, int maxAmp, int BPM);
 
 protected:
+	/* raw pointer of the wave in the memory */
 	byte* raw = nullptr;
+
+	/* data chunk pointer */
 	WAVE_CHUNK* data;
+	
+	/* current iteration pointer */
 	byte* p_data = nullptr;
 };
 
+/*
+StatBeatDetection
+Statistical Beat Detection Implementation
+Algorithm By Frédéric Patin @ http://archive.gamedev.net/archive/reference/programming/features/beatdetection/index.html
 
+*/
 class LIBWAV_API StatBeatDetection
 {
 public:
+	/*
+	Constructor
+	hnsPrecision: how large is a block of samples to be considered, in time
+	hnsBufferDuration: how many blocks in history should be considered for detection 
+	*/
 	StatBeatDetection(Wave& wave, REFERENCE_TIME hnsPrecision = 750000, REFERENCE_TIME hnsBufferDuration = 10000000)
 	{
 		this->wave = &wave;
@@ -538,11 +608,14 @@ public:
 	~StatBeatDetection(){ release(); }
 	void release(){ DELETEIF_NONNULL(buffer); }
 
-	virtual int length() const{ return wave->get_data_size() / ((wave->getH()->wBitsPerSample / 8)*wave->getH()->nChannels) / nSamplesPrecision; }
+	/* This value is determined by the time the object is constructed */
+	virtual int length() const { return wave->get_data_size() / ((wave->getH()->wBitsPerSample / 8)*wave->getH()->nChannels) / nSamplesPrecision; }
 
-	virtual bool hasNext() const{ return wave->hasNext(nSamplesPrecision); }
+	/* Iteration */
+	virtual bool hasNext() const { return wave->hasNext(nSamplesPrecision); }
 	virtual double next();
 
+	/* Get nSamples in a block of consideration */
 	int getPrecision() const { return nSamplesPrecision; }
 
 protected:
@@ -553,6 +626,7 @@ protected:
 };
 
 
+/* Windows Audio Session */
 namespace WASAPI
 {
 
