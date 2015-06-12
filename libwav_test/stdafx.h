@@ -20,6 +20,12 @@
 
 // TODO: reference additional headers your program requires here
 #include "../libwav/libwav.h"
+#ifdef _DEBUG	//vs
+#pragma comment(lib, "../Debug/libwav.lib")
+#else
+#pragma comment(lib, "../Release/libwav.lib")
+#endif
+
 #include <objidl.h>
 #include <gdiplus.h>
 using namespace Gdiplus;

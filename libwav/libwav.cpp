@@ -9,18 +9,33 @@ using namespace std;
 #pragma warning(disable: 4244)	//precision lost
 
 
-Wave::Wave(string filename)
+Wave::Wave(std::string str, WAVE_CONSTRUCT construction_type)
 {
-	FILE *f = fopen(filename.c_str(), "rb");
-	fseek(f, 0, SEEK_END);
-	long fsize = ftell(f);
-	fseek(f, 0, SEEK_SET);
-	raw = new BYTE[fsize];
-	fread(raw, 1, fsize, f);
-	fclose(f);
+	if (construction_type == FILENAME)
+	{
+		FILE *f = fopen(str.c_str(), "rb");
+		fseek(f, 0, SEEK_END);
+		long fsize = ftell(f);
+		fseek(f, 0, SEEK_SET);
+		raw = new BYTE[fsize];
+		fread(raw, 1, fsize, f);
+		fclose(f);
 
-	if (fsize > sizeof(WAVE_H)) base_constructor(raw, fsize);
-	else throw new exception("length invalid");
+		if (fsize > sizeof(WAVE_H)) base_constructor(raw, fsize);
+		else throw new exception("length invalid");
+	}
+	else if (construction_type == RAW)
+	{
+		this->raw = new BYTE[str.length()];
+		memcpy(this->raw, str.c_str(), str.length());
+		if (str.length() > sizeof(WAVE_H)) base_constructor(this->raw, str.length());
+		else throw new exception("length invalid");
+	}
+	else
+	{
+		throw new exception();
+	}
+
 }
 
 Wave::~Wave()
@@ -34,7 +49,9 @@ Wave::~Wave()
 
 Wave::Wave(byte raw[], int length)
 {
-	if (length > sizeof(WAVE_H)) base_constructor(raw, length);
+	this->raw = new BYTE[length];
+	memcpy(this->raw, raw, length);
+	if (length > sizeof(WAVE_H)) base_constructor(this->raw, length);
 	else throw new exception("length invalid");
 }
 

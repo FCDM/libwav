@@ -11,11 +11,6 @@
 #define LIBWAV_API __declspec(dllexport)
 #else
 #define LIBWAV_API __declspec(dllimport)
-#ifdef _DEBUG	//vs
-#pragma comment(lib, "../Debug/libwav.lib")
-#else
-#pragma comment(lib, "../Release/libwav.lib")
-#endif
 #endif
 
 #pragma warning(disable: 4996)	//unsafe fopen
@@ -401,11 +396,20 @@ public:
 	/* Generates an invalid Wave Object */
 	Wave(){}
 
-	/* File IO load the specified Wave File, invalid Wave file or length will throw an exception */
-	Wave(std::string filename);
+	/* Enum for specification of Wave constructor, see Wave::Wave */
+	enum WAVE_CONSTRUCT
+	{
+		FILENAME, RAW
+	};
 
-	/* Length is provided only for securing possible access violation, construct a wav file by a pointer to its memory address, INPLACE */
+	/* File IO load the specified Wave File, invalid Wave file or length will throw an exception */
+	/* If the type is RAW, then the string will be treated as a Wave file*/
+	Wave(std::string str, WAVE_CONSTRUCT construction_type=FILENAME);
+
+	/* Length is provided only for securing possible access violation, construct a wav file by a pointer to its memory address */
+	/* WILL REPLICATE A COPY OF THE CONTENTS */
 	Wave(byte raw[], int length);
+
 	~Wave();
 
 	/* Return the leading structure of Wave */

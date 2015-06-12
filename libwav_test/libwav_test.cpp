@@ -212,8 +212,14 @@ int APIENTRY _tWinMain(_In_ HINSTANCE hInstance,
 	bd.release();
 	w.reset();
 
-
-
+	FILE *f = fopen("sound.wav", "rb");
+	fseek(f, 0, SEEK_END);
+	long fsize = ftell(f);
+	fseek(f, 0, SEEK_SET);
+	BYTE* raw = new BYTE[fsize];
+	fread(raw, 1, fsize, f);
+	fclose(f);
+	Wave tmp(std::string((char*)raw, fsize), Wave::RAW);
 
  	// TODO: Place code here.
 	MSG msg;
